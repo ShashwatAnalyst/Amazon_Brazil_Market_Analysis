@@ -457,7 +457,75 @@ LIMIT 20;
 		over their lifecycle. Calculate monthly cumulative sales for each 
 		product from the date of its first sale. Use a recursive CTE to 
 		compute the cumulative sales (total_sales) for each product month 
-		by month.
+		by month.*/
+		
+WITH RECURSIVE monthly_sales AS (
+    SELECT 
+        oi.product_id,
+        DATE_TRUNC('month', o.order_purchase_timestamp) AS sale_month,
+        SUM(oi.price + oi.freight_value) AS monthly_sales,
+        MIN(DATE_TRUNC('month', o.order_purchase_timestamp))
+            OVER (PARTITION BY oi.product_id) AS first_sale_month
+    FROM amazon_brazil.orders o
+    JOIN amazon_brazil.order_items oi
+        ON o.order_id = oi.order_id
+    WHERE o.order_status NOT IN ('canceled', 'unavailable')
+    GROUP BY oi.product_id, sale_month
+),
+cte AS (
+    -- Anchor: first month per product
+    SELECT
+        product_id,
+        sale_month,
+        monthly_sales AS total_sales
+    FROM monthly_sales
+    WHERE sale_month = first_sale_month
 
-    Output: product_id, sale_month, and total_sales
+    UNION ALL
+    -- Recursive step: move forward month by month
+    SELECT
+        ms.product_id,
+        ms.sale_month,
+        c.total_sales + ms.monthly_sales AS total_sales
+    FROM cte c
+    JOIN monthly_sales ms
+        ON ms.product_id = c.product_id
+       AND ms.sale_month = c.sale_month + INTERVAL '1 month'
+)
+SELECT *
+FROM cte
+ORDER BY product_id, sale_month;
+/*
+========================================================================================
+	7 . To understand how different payment methods affect monthly sales growth,
+	Amazon wants to compute the total sales for each payment method and calculate
+	the month-over-month growth rate for the past year (year 2018). Write query to
+	first calculate total monthly sales for each payment method, then compute the
+	percentage change from the previous month.*/
+	
+WITH monthly_sales AS (
+SELECT 
+	p.payment_type,
+	DATE_TRUNC('month', o.order_purchase_timestamp) AS sale_month,
+	SUM(oi.price + oi.freight_value) AS monthly_total
+FROM amazon_brazil.orders o
+JOIN amazon_brazil.order_items oi
+	ON o.order_id = oi.order_id
+JOIN amazon_brazil.payments p
+	ON p.order_id = o.order_id
+WHERE o.order_status NOT IN ('canceled', 'unavailable')
+AND DATE_PART('year', o.order_purchase_timestamp) = 2018
+GROUP BY p.payment_type, sale_month
+ORDER BY p.payment_type, sale_month
+)
+SELECT payment_type,sale_month,monthly_total,
+ROUND((monthly_total - prev_month_total) * 100.0 / prev_month_total,2)
+FROM (
+SELECT * ,
+LAG(monthly_total)
+		OVER(PARTITION BY payment_type) AS prev_month_total
+FROM monthly_sales 
+)t
+/*
+========================================================================================
 */
