@@ -275,16 +275,22 @@ ORDER BY avg_price DESC;
 	   orders over time. Find all customers with more than one order, and 
 	   display their customer unique IDs along with the total number of 
 	   orders they have placed.*/
-
+	   
+WITH customer_orders AS (
+SELECT 
+	customer_id,
+	COUNT(order_id) AS total_orders
+FROM amazon_brazil.orders o
+GROUP BY customer_id
+HAVING COUNT(order_id) > 1
+)
 SELECT 
 	c.customer_unique_id,
-	COUNT(DISTINCT o.order_id) AS total_orders
-FROM amazon_brazil.customers c
-JOIN amazon_brazil.orders o
-	ON o.customer_id = c.customer_id
-GROUP BY c.customer_unique_id
-HAVING COUNT(*) > 1
-ORDER BY total_orders DESC;
+	co.total_orders
+FROM amazon_brazil.customers c 
+JOIN customer_orders co 
+	ON c.customer_id = co.customer_id
+ORDER BY co.total_orders DESC;
 /*
 ========================================================================================
 
@@ -531,4 +537,6 @@ FROM monthly_sales
 /*
 ========================================================================================
 */
+
+
 
