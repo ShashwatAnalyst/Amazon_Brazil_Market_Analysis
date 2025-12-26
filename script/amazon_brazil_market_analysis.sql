@@ -360,7 +360,7 @@ FROM (
 
 --================================================================================
 
--- Objective: Segment customers based on purchase frequency using CTE
+-- Objective: Segment customers based on purchase frequency
 		
 WITH CTE AS (
 SELECT 
@@ -396,7 +396,7 @@ LIMIT 20;
 
 --================================================================================
 
--- Objective: Compute cumulative monthly sales per product over its lifecycle Using Recirsive CTE
+-- Objective: Compute cumulative monthly sales per product over its lifecycle
 		
 WITH RECURSIVE monthly_sales AS (
     SELECT 
