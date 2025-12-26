@@ -1,11 +1,8 @@
 /*
-DDL Script: Create Tables
-
-Script Purpose:
-============================================================================
-	1. Creates 'amazon_brazil' schema if it does not exist.
-    2. Creates tables in 'amazon_brazil' schema if not already exists.
-============================================================================
+================================================================================
+Section: DDL – Schema & Table Creation
+Objective: Create required schema and tables for Amazon Brazil sales analysis
+================================================================================
 */
 
 CREATE SCHEMA IF NOT EXISTS amazon_brazil;
@@ -89,17 +86,13 @@ CREATE TABLE IF NOT EXISTS amazon_brazil.products (
 	product_width_cm 			INT
 );
 /*
-========================================================================================
-DQL Script: Analysis - I
-
-Script Purpose:
-========================================================================================
-
-	1. To simplify its financial reports, Amazon India needs to standardize 
-	   payment values. Display the average payment values for each payment_type.
-	   Round the average payment values to integer (no decimal) and display the 
-	   results sorted in ascending order. 
+================================================================================
+Section: Analysis I – Payments & Pricing Insights
+Objective: Analyze payment behavior and pricing characteristics
+================================================================================
 */
+
+-- Objective: Calculate average payment value by payment type
 
 SELECT 
 	payment_type,
@@ -108,14 +101,10 @@ FROM amazon_brazil.payments
 WHERE payment_type <> 'not_defined'
 GROUP BY payment_type
 ORDER BY rounded_avg_payment ASC;
-/*
-========================================================================================
 
-	2. To refine its payment strategy, Amazon India wants to know the 
-	   distribution of orders by payment type. Calculate the percentage 
-	   of total orders for each payment type, rounded to one decimal place, 
-	   and display them in descending order
-*/
+--================================================================================
+
+-- Objective: Compute percentage distribution of orders by payment type
 
 SELECT payment_type,
        ROUND(COUNT(DISTINCT o.order_id)*100.0/
@@ -130,14 +119,10 @@ JOIN amazon_brazil.orders o
 WHERE p.payment_type <> 'not_defined'
 GROUP BY p.payment_type
 ORDER BY percentage_orders DESC;
-/*
-========================================================================================
 
-	3. Amazon India seeks to create targeted promotions for products within
-	   specific price ranges. Identify all products priced between 100 and 
-	   500 BRL that contain the word 'Smart' in their name. 
-	   Display these products, sorted by price in descending order.
-*/
+--================================================================================
+
+-- Objective: Identify mid-priced products containing 'Smart' keyword
 
 SELECT 
 	oi.product_id,
@@ -149,13 +134,10 @@ WHERE p.product_category_name ILIKE '%Smart%'
 	AND oi.price BETWEEN 100 AND 500
 GROUP BY oi.product_id
 ORDER BY price DESC;
-/*
 
-========================================================================================
-	4. To identify seasonal sales patterns, Amazon India needs to focus on
-	   the most successful months. Determine the top 3 months with the 
-	   highest total sales value, rounded to the nearest integer.
-*/
+--================================================================================
+
+-- Objective: Identify top 3 months by total sales value
 
 SELECT 
 	TO_CHAR(order_purchase_timestamp,'Month') AS month,
@@ -168,13 +150,9 @@ GROUP BY month
 ORDER BY total_sales DESC
 LIMIT 3;
 
-/*
-========================================================================================
+--================================================================================
 
-	5. Amazon India is interested in product categories with significant 
-	   price variations. Find categories where the difference between 
-	   the maximum and minimum product prices is greater than 500 BRL.	   
-*/
+-- Objective: Find product categories with high price dispersion
 
 SELECT 
 	p.product_category_name,
@@ -186,14 +164,10 @@ WHERE p.product_category_name IS NOT NULL
 GROUP BY p.product_category_name
 HAVING MAX(oi.price) - MIN(oi.price) > 500
 ORDER BY price_difference DESC;
-/*
-========================================================================================
 
-	6. To enhance the customer experience, Amazon India wants to find which
-	   payment types have the most consistent transaction amounts. Identify 
-	   the payment types with the least variance in transaction amounts, 
-	   sorting by the smallest standard deviation first.   
-*/
+--================================================================================
+
+-- Objective: Measure payment type consistency using transaction variance
 
 SELECT 
 	payment_type,
@@ -202,14 +176,10 @@ FROM amazon_brazil.payments
 WHERE payment_type <> 'not_defined'
 GROUP BY payment_type
 ORDER BY std_deviation ASC;
-/*
-========================================================================================
 
-	7. Amazon India wants to identify products that may have incomplete 
-	   name in order to fix it from their end. Retrieve the list of products 
-	   where the product category name is missing or contains only a single
-	   character.  
-*/
+--================================================================================
+
+-- Objective: Detect products with missing or incomplete category names
 
 SELECT 
 	product_id, 
@@ -218,18 +188,15 @@ FROM amazon_brazil.products
 WHERE product_category_name IS NULL
 OR LENGTH(TRIM(product_category_name)) = 1
 ORDER BY product_category_name;
+
 /*
-========================================================================================
-DQL Script: Analysis - II
+================================================================================
+Section: Analysis II – Customer & Category Behavior
+Objective: Analyze customer purchasing patterns and category performance
+================================================================================
+*/
 
-Script Purpose:
-========================================================================================
-
-	1. Amazon India wants to understand which payment types are most popular across 
-	   different order value segments (e.g., low, medium, high). Segment order values 
-	   into three ranges: orders less than 200 BRL, between 200 and 1000 BRL, and 
-	   over 1000 BRL. Calculate the count of each payment type within these ranges 
-	   and display the results in descending order of count.*/
+-- Objective: Analyze payment preference across order value segments
 	   
 WITH order_value_table AS (
 SELECT order_id ,SUM(price + freight_value) AS order_value
@@ -250,13 +217,10 @@ JOIN amazon_brazil.payments p
 WHERE p.payment_type <> 'not_defined'
 GROUP BY order_value_segment,p.payment_type
 ORDER BY count DESC;
-/*
-========================================================================================
 
-	2. Amazon India wants to analyse the price range and average price for 
-	   each product category. Calculate the minimum, maximum, and average 
-	   price for each category, and list them in descending order by the 
-	   average price.*/
+--================================================================================
+
+-- Objective: Analyze price distribution and average pricing by category
 	   
 SELECT 
 	p.product_category_name,
@@ -268,13 +232,10 @@ JOIN amazon_brazil.products p
 	ON oi.product_id = p.product_id
 GROUP BY p.product_category_name
 ORDER BY avg_price DESC;
-/*
-========================================================================================
 
-	3. Amazon India wants to identify the customers who have placed multiple 
-	   orders over time. Find all customers with more than one order, and 
-	   display their customer unique IDs along with the total number of 
-	   orders they have placed.*/
+--================================================================================
+
+-- Objective: Identify repeat customers based on order frequency
 	   
 WITH customer_orders AS (
 SELECT 
@@ -291,13 +252,10 @@ FROM amazon_brazil.customers c
 JOIN customer_orders co 
 	ON c.customer_id = co.customer_id
 ORDER BY co.total_orders DESC;
-/*
-========================================================================================
 
-	4. Amazon India wants to categorize customers into different types 
-	   ('New – order qty. = 1' ;  'Returning' –order qty. 2 to 4;  'Loyal' – order qty. >4) 
-	   based on their purchase history. Use a temporary table to define these categories and 
-	   join it with the customers table to update and display the customer types.*/
+--================================================================================
+
+-- Objective: Classify customers into New, Returning, and Loyal segments
 	   
 CREATE TEMP TABLE customer_type_temp AS
 SELECT 
@@ -315,13 +273,10 @@ SELECT
 FROM amazon_brazil.customers c
 JOIN customer_type_temp ctt
     ON c.customer_id = ctt.customer_id;
-/*
-========================================================================================
 
-	5. Amazon India wants to know which product categories generate the most revenue.
-	   Use joins between the tables to calculate the total revenue for each product 
-	   category. Display the top 5 categories.
-*/
+--================================================================================
+
+-- Objective: Identify top revenue-generating product categories
 	   
 SELECT 
 	p.product_category_name,
@@ -335,19 +290,16 @@ WHERE o.order_status NOT IN ('canceled', 'unavailable')
 GROUP BY p.product_category_name
 ORDER BY total_revenue DESC
 LIMIT 5;
+
 /*
-========================================================================================
-DQL Script: Analysis - III
+================================================================================
+Section: Analysis III – Time Series, Growth & Advanced Analysis
+Objective: Analyze seasonal trends, growth patterns, and customer value
+================================================================================
+*/
 
-Script Purpose:
-========================================================================================
+-- Objective: Compare total sales across seasonal periods
 
-	1. The marketing team wants to compare the total sales between different seasons. 
-	   Use a subquery to calculate total sales for each season 
-	   (Spring, Summer, Autumn, Winter) based on order purchase dates, 
-	   and display the results. Spring is in the months of March, April and May. 
-	   Summer is from June to August and Autumn is between September and November and 
-	   rest months are Winter.*/
 SELECT 
 	CASE WHEN DATE_PART('month',order_purchase_timestamp) IN (3,4,5) THEN 'Spring'
 		 WHEN DATE_PART('month',order_purchase_timestamp) IN (6,7,8) THEN 'Summer'
@@ -361,14 +313,10 @@ JOIN amazon_brazil.order_items oi
 WHERE o.order_status NOT IN ('canceled', 'unavailable')
 GROUP BY season
 ORDER BY total_sales DESC
-/*
 
-========================================================================================
+--================================================================================
 
-	2 . The inventory team is interested in identifying products that have sales 
-	    volumes above the overall average. Write a query that uses a subquery to 
-		filter products with a total quantity sold above the average quantity.*/
-
+-- Objective: Identify products with above-average sales volume
 
 WITH quantity_sold AS (
 SELECT 
@@ -389,15 +337,10 @@ SELECT
 	AVG(total_quantity_sold) AS avg_total_quantity_sold
 FROM quantity_sold
 )
-/*
-========================================================================================
 
-	3 . To understand seasonal sales patterns, the finance team is analysing 
-		the monthly revenue trends over the past year (year 2018). Run a query to
-		calculate total revenue generated each month and identify periods of peak 
-		and low sales. Export the data to Excel and create a graph to visually 
-		represent revenue changes across the months. 
-*/
+--================================================================================
+
+-- Objective: Analyze monthly revenue trends for year 2018
 
 SELECT 
     TO_CHAR(month, 'Mon YYYY') AS month,
@@ -414,14 +357,10 @@ FROM (
     GROUP BY month
 	ORDER BY month
 ) t
-/*
-========================================================================================
 
-	4 . A loyalty program is being designed  for Amazon India. Create a 
-		segmentation based on purchase frequency: ‘Occasional’ for customers
-		with 1-2 orders, ‘Regular’ for 3-5 orders, and ‘Loyal’ for more than
-		5 orders. Use a CTE to classify customers and their count and generate
-		a chart in Excel to show the proportion of each segment.*/
+--================================================================================
+
+-- Objective: Segment customers based on purchase frequency using CTE
 		
 WITH CTE AS (
 SELECT 
@@ -438,13 +377,10 @@ SELECT
 	COUNT(*) AS count
 FROM CTE
 GROUP BY customer_type
-/*
-========================================================================================
 
-	5 . Amazon wants to identify high-value customers to target for 
-	an exclusive rewards program. You are required to rank customers 
-	based on their average order value (avg_order_value) to find the
-	top 20 customers.*/
+--================================================================================
+
+-- Objective: Rank customers by average order value to identify high-value users
 
 SELECT 
 	o.customer_id ,
@@ -457,14 +393,10 @@ WHERE o.order_status NOT IN ('canceled', 'unavailable')
 GROUP BY o.customer_id
 ORDER BY customer_rank
 LIMIT 20;
-/*
-========================================================================================
 
-	6 . Amazon wants to analyze sales growth trends for its key products
-		over their lifecycle. Calculate monthly cumulative sales for each 
-		product from the date of its first sale. Use a recursive CTE to 
-		compute the cumulative sales (total_sales) for each product month 
-		by month.*/
+--================================================================================
+
+-- Objective: Compute cumulative monthly sales per product over its lifecycle Using Recirsive CTE
 		
 WITH RECURSIVE monthly_sales AS (
     SELECT 
@@ -502,14 +434,10 @@ rcte AS (
 SELECT *
 FROM rcte
 ORDER BY product_id, sale_month;
-/*
-========================================================================================
 
-	7 . To understand how different payment methods affect monthly sales growth,
-	Amazon wants to compute the total sales for each payment method and calculate
-	the month-over-month growth rate for the past year (year 2018). Write query to
-	first calculate total monthly sales for each payment method, then compute the
-	percentage change from the previous month.*/
+--================================================================================
+
+-- Objective: Calculate month-over-month sales growth by payment method
 	
 WITH monthly_sales AS (
 SELECT 
@@ -534,9 +462,7 @@ LAG(monthly_total)
 		OVER(PARTITION BY payment_type) AS prev_month_total
 FROM monthly_sales 
 )t
-/*
-========================================================================================
-*/
 
+--================================================================================
 
 
