@@ -332,11 +332,13 @@ SELECT
 	product_id,
 	total_quantity_sold
 FROM quantity_sold
-WHERE total_quantity_sold > (
-SELECT 
-	AVG(total_quantity_sold) AS avg_total_quantity_sold
-FROM quantity_sold
+WHERE total_quantity_sold > 
+(
+	SELECT 
+		AVG(total_quantity_sold) AS avg_total_quantity_sold
+	FROM quantity_sold
 )
+ORDER BY total_quantity_sold DESC;
 
 --================================================================================
 
@@ -464,5 +466,3 @@ FROM monthly_sales
 )t
 
 --================================================================================
-
-
